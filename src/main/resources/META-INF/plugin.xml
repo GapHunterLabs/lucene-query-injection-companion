@@ -1,0 +1,40 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>dev.gaphunter.lucenequeryinjectioncompanion</id>
+    <name>Lucene Query Injection Companion</name>
+    <vendor>Gap Hunter Labs</vendor>
+    <description><![CDATA[
+        <p>Flags a <code>QueryBuilders.queryStringQuery(...)</code>/
+        <code>.simpleQueryStringQuery(...)</code> call whose argument
+        is built from an HTTP endpoint parameter -- CWE-943 (an
+        attacker's raw input becomes Lucene query SOURCE TEXT,
+        enabling filter bypass) combined with CWE-400: CVE-2023-31419
+        confirms a real Denial of Service via a maliciously crafted
+        query string against Elasticsearch's own <code>_search</code>
+        API (Stack Overflow from deeply nested query syntax).</p>
+        <p>Built on a real, hand-written Lucene query-string parser --
+        the FIFTH full custom grammar in this catalog (after regex,
+        SpEL, XPath, and LDAP). Introduces range queries
+        (<code>[1 TO 10]</code>), boosting (<code>term^2.0</code>), and
+        fuzzy matching (<code>term~2</code>) -- operators none of the
+        other four grammars have.</p>
+        <p>Stated honestly: v0.1 only Java, only same-method taint;
+        searched explicitly for a CodeQL/Datadog rule for this exact
+        angle and found none (unlike SQL injection, which both cover
+        extensively) -- no dedicated Marketplace plugin found either.</p>
+        <p>Free. No license nags, no telemetry, no network calls.</p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <localInspection language="JAVA"
+            groupName="Lucene Query Injection Companion"
+            displayName="Lucene/Elasticsearch query built from untrusted input"
+            enabledByDefault="true"
+            level="WARNING"
+            implementationClass="dev.gaphunter.lucenequeryinjectioncompanion.inspection.LuceneInjectionSinkInspection"/>
+        <notificationGroup id="Lucene Query Injection Companion" displayType="BALLOON"/>
+    </extensions>
+</idea-plugin>
