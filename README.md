@@ -44,6 +44,13 @@ cover extensively). No dedicated Marketplace plugin found.
 - A term/identifier does not include `-` in its own character class
   (a hyphenated term like `field-name` is out of scope, since `-` is
   also the real "prohibit this clause" prefix operator).
+- A numeric-typed endpoint parameter (`int`/`Integer`/`long`/`Long`/
+  `double`/`Double`/`float`/`Float`/`short`/`Short`/`byte`/`Byte`) is
+  never treated as a taint source -- a genuinely numeric value can
+  never carry Lucene injection syntax, and this grammar leans heavily
+  on numeric-looking operands (range/boost/fuzzy), so without this
+  exclusion a legitimate `score:[minScore TO 100]`-style range would
+  false-positive.
 
 ## Usage
 

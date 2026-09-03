@@ -88,6 +88,25 @@ class LuceneInjectionSinkInspectionTest : BasePlatformTestCase() {
         assertTrue(highlights.none { it.description?.contains("CWE-943") == true })
     }
 
+    fun `test a numeric-typed request parameter concatenated into a range is not flagged`() {
+        myFixture.configureByText(
+            "ScoreController.java",
+            """
+            import org.elasticsearch.index.query.QueryBuilders;
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            class ScoreController {
+                @GetMapping("/search")
+                Object run(int minScore) {
+                    return QueryBuilders.queryStringQuery("score:[" + minScore + " TO 100]");
+                }
+            }
+            """.trimIndent(),
+        )
+        val highlights = myFixture.doHighlighting()
+        assertTrue(highlights.none { it.description?.contains("CWE-943") == true })
+    }
+
     fun `test a non-endpoint method with the same shape is not flagged`() {
         myFixture.configureByText(
             "Helper.java",

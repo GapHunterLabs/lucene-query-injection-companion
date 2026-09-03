@@ -2,6 +2,7 @@ package dev.gaphunter.lucenequeryinjectioncompanion.detect
 
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.JavaTokenType
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiFile
@@ -9,7 +10,9 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiPolyadicExpression
+import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiType
 import dev.gaphunter.lucenequeryinjectioncompanion.lucene.LuceneParser
 import dev.gaphunter.lucenequeryinjectioncompanion.model.LuceneSinkHit
 
@@ -35,11 +38,19 @@ import dev.gaphunter.lucenequeryinjectioncompanion.model.LuceneSinkHit
  *
  * **v0.1 scope, stated honestly:** only `org.elasticsearch.index.query.QueryBuilders`
  * (checked by qualifier reference NAME, never resolved against the
- * real classpath); only same-method taint.
+ * real classpath); only same-method taint; a numeric-typed endpoint
+ * parameter (`int`/`Integer`/`long`/`Long`/`double`/`Double`/`float`/
+ * `Float`/`short`/`Short`/`byte`/`Byte`) is never treated as a taint
+ * source -- confirmed real feedback: Lucene's own grammar leans
+ * heavily on numeric-looking operands (range `[x TO y]`, boost `^n`,
+ * fuzzy `~n`), and a genuinely `int`-typed parameter can never carry
+ * injection syntax (Spring already rejects a non-numeric request
+ * before the method body runs), so flagging one would be pure noise.
  */
 object JavaLuceneInjectionSinkFinder {
 
     private val SINK_METHOD_NAMES = setOf("queryStringQuery", "simpleQueryStringQuery")
+    private val NUMERIC_WRAPPER_CLASS_NAMES = setOf("Integer", "Long", "Double", "Float", "Short", "Byte")
 
     fun findAll(file: PsiFile): List<LuceneSinkHit> {
         val hits = mutableListOf<LuceneSinkHit>()
@@ -55,7 +66,10 @@ object JavaLuceneInjectionSinkFinder {
 
     private fun hitsForMethod(method: PsiMethod): List<LuceneSinkHit> {
         val body = method.body ?: return emptyList()
-        val taintedNames = method.parameterList.parameters.map { it.name }.toSet()
+        val taintedNames = method.parameterList.parameters
+            .filterNot { isNumericType(it.type) }
+            .map { it.name }
+            .toSet()
         if (taintedNames.isEmpty()) return emptyList()
 
         val hits = mutableListOf<LuceneSinkHit>()
@@ -110,4 +124,11 @@ object JavaLuceneInjectionSinkFinder {
     /** `QueryBuilders.queryStringQuery(...)` -- checked by the qualifier's own reference TEXT, never resolved against the real Elasticsearch classpath. */
     private fun looksLikeQueryBuilders(qualifier: PsiExpression?): Boolean =
         (qualifier as? PsiReferenceExpression)?.referenceName == "QueryBuilders"
+
+    /** `int`/`long`/... or `Integer`/`Long`/... -- a value of one of these types can never carry Lucene injection syntax, so it's never a taint source. */
+    private fun isNumericType(type: PsiType): Boolean = when (type) {
+        is PsiPrimitiveType -> type.name in setOf("int", "long", "double", "float", "short", "byte")
+        is PsiClassType -> type.className in NUMERIC_WRAPPER_CLASS_NAMES
+        else -> false
+    }
 }
