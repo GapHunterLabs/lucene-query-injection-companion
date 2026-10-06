@@ -1,0 +1,10 @@
+<html>
+<body>
+Reports a <code>QueryBuilders.queryStringQuery(...)</code> or <code>simpleQueryStringQuery(...)</code> call whose
+argument is built from an HTTP endpoint parameter.
+<!-- tooltip end -->
+<p>The raw input becomes Lucene query syntax: an attacker can widen or bypass filters (CWE-943), and a crafted,
+deeply nested query can also exhaust the search cluster (CWE-400; see CVE-2023-31419). Pass user input as a
+term, match or other structured query instead of query-string syntax.</p>
+</body>
+</html>
