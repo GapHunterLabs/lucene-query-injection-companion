@@ -3,6 +3,8 @@
 Flags a `QueryBuilders.queryStringQuery(...)`/`.simpleQueryStringQuery(...)`
 call whose argument is built from an HTTP endpoint parameter.
 
+![Lucene Query Injection Companion](docs/media/hero.gif)
+
 ## Why it exists
 
 CWE-943 (an attacker's raw input becomes Lucene query SOURCE TEXT,
